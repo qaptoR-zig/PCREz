@@ -1,0 +1,63 @@
+
+
+
+
+
+
+  I. PCREz
+
+
+    `7MM"""Mq.   .g8"""bgd `7MM"""Mq.  `7MM"""YMM
+      MM   `MM..dP'     `M   MM   `MM.   MM    `7
+      MM   ,M9 dM'       `   MM   ,M9    MM   d    M"""MMV
+      MMmmdM9  MM            MMmmdM9     MMmmMM    '  AMV
+      MM       MM.           MM  YM.     MM   Y  ,   AMV
+      MM       `Mb.     ,'   MM   `Mb.   MM     ,M  AMV  ,
+    .JMML.       `"bmmmd'  .JMML. .JMM..JMMmmmmMMM AMMmmmM
+
+
+
+  II. What is PCREz?
+
+This library is a sensible wrapper around the PCRE2 C library, providing a more
+user-friendly experience for developers working in Zig, while providing a first
+class Regex engine.
+
+
+  III. Why Not 1 to 1 bindings?
+
+What this library will not do is provide a direct 1 to 1 binding to the PCRE2 library.
+
+Though it may grow beyond the current scope, the primary goal is to provide a
+sensible Regex API for common use-cases, and do so in a more idiomatic way for zig.
+
+For anything more advanced it is recommended to use the PCRE2 library directly. To do so
+the license of this project is made permissive so that anyone may follow the same steps
+to import the library into their own project.
+
+However, the inital source for learning how to do so can be found here:
+[Url] https://github.com/sheran/pcre2-zig
+
+
+  IV. What is Fey file format?
+
+Fey is a new markup language format. Specification of the language can be found at:
+[Url] https://github.com/Loreite/Fey
+
+It is extremely early in development, and it is not recommended that anyone use it
+themselves unles they are prepared to deal with a continually changing specification.
+
+However, it is used in this project (as well as for its own documentation), so consider this
+a demonstration of its capabilities. (More or less what it looks like to use).
+
+Feel free to play around with it however, and contribute suggestions to the project.
+
+One thing to note is that Fey is designed to be different for each individual user, which is
+where it gets the name. There is nothing wrong with your Fey files looking different from
+any others. The specification of an eventual Fey interpreter will be the only thing that
+ultimately determines what is valid Fey or not, and it is intended to be scriptable.
+
+
+
+
+
