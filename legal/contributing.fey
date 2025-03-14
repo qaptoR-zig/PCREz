@@ -1,0 +1,201 @@
+
+
+
+
+
+    I. Contributors guidelines
+
+    This document summarizes the most important points for people interested in
+    contributing to Fey, especially via bug reports or pull requests.
+
+    The Fey documentation has a dedicated [Contributing section](tbd)
+    which details these points and more, and is a recommended read.
+
+
+    I.i. Table of contents
+
+    - [Reporting bugs]()
+    - [Proposing features or improvements]()
+    - [Contributing pull requests]()
+    - [Contributing to Fey translations]()
+    - [Communicating with developers]()
+
+
+    I.ii. Reporting bugs
+
+    I.ii.a. Where to report bugs
+
+    Report bugs [here]().
+    Please follow the instructions in the template when you do.
+
+
+    I.ii.b. Verify first
+
+    - Check the bug is reproducible
+    - Check if the bug has already been reported.
+    - Check if the bug is fixed in the latest master branch.
+
+
+    I.ii.c. What to include in a bug report
+
+    - include MRP (compressed archive)
+    - exclude erroneous files/directors/information in compressed archive
+
+
+    I.iii. Proposing features or improvements
+
+    I.iii.a. Where to propose features
+
+    - propose features [here]() as an issue (for the time being).
+
+
+    I.iii.b. Verify first
+
+    - Check if the feature is already being worked on.
+    - Check if the feature is already implemented in the latest master branch.
+    - Check if the feature is desired by the community. (Using community chat servers, forums, etc.)
+    - Check if the feature has been proposed before.
+
+
+    I.iii.b. What to include in a feature proposal
+
+    - Include a detailed description of the feature.
+    - Include a use case for the feature.
+    - (Optionally) Include a description of how the feature could be implemented.
+
+
+    I.iv. Contributing pull requests
+
+    I.iv.a. Due your due diligence
+
+    - Check that the functionality is desired, which means that it solves a common use case.
+    - Check with other developers on how to implement it best.
+
+
+    I.iv.b. What to remember about pull requests
+
+    - Even after doing your due diligence the PR is an opprotunity, not a guarantee.
+    - If it doesn't get merged, your PR is useful for future work by another developer.
+    - Your PR will remain in the project history as proof of your efforts.
+
+
+    I.iv.c. Bug fixes
+
+    Similar rules can be applied when contributing bug fixes
+    - it's always best to discuss the implementation in the bug report first
+
+
+    I.iv.d. Be mindful of your commits
+
+    Try to make simple PRs that handle one specific topic. Just like for reporting
+    issues, it's better to open 3 different PRs that each address a different issue
+    than one big PR with three commits. This makes it easier to review, approve, and
+    merge the changes independently.
+
+    When updating your fork with upstream changes, please use ``git pull --rebase``
+    to avoid creating "merge commits". Those commits unnecessarily pollute the git
+    history when coming from PRs.
+
+    Also try to make commits that bring the engine from one stable state to another
+    stable state, i.e. if your first commit has a bug that you fixed in the second
+    commit, try to merge them together before making your pull request. This
+    includes fixing build issues or typos, adding documentation, etc.
+
+
+    I.iv.e. Format your commit messages with readability in mind
+
+    The way you format your commit messages is quite important to ensure that the
+    commit history and changelog will be easy to read and understand. A Git commit
+    message is formatted as a short title (first line) and an extended description
+    (everything after the first line and an empty separation line).
+
+    The short title is the most important part, as it is what will appear in the
+    changelog or in the GitHub interface unless you click the "expand" button.
+    Try to keep that first line under 72 characters, but you can go slightly above
+    if necessary to keep the sentence clear.
+
+    It should be written in English, starting with a capital letter, and usually
+    with a verb in imperative form. A typical bugfix would start with "Fix", while
+    the addition of a new feature would start with "Add". A prefix can be added to
+    specify the engine area affected by the commit. Some examples:
+
+    - Add ...
+    - Show ...
+    - Fix ...
+
+    If your commit fixes a reported issue, please include it in the _description_
+    of the PR (not in the title, or the commit message) using one of the
+    [GitHub closing keywords](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue)
+    such as "Fixes #1234". This will cause the issue to be closed automatically if
+    the PR is merged. Adding it to the commit message is easier, but adds a lot of
+    unnecessary updates in the issue distracting from the thread.
+
+    Here's an example of a well-formatted commit message (note how the extended
+    description is also manually wrapped at 80 chars for readability):
+
+    [Example][
+
+    example not yet available...
+
+    ][Example]
+
+    **Note:** When using the GitHub online editor or its drag-and-drop
+    feature, *please* edit the commit title to something meaningful. Commits named
+    "Update my_file.cpp" won't be accepted.
+
+
+    I.iv.f. Document your changes
+
+    If your pull request adds new features or changes existing ones, make sure to
+    update the relevant documentation.
+
+    If your pull request modifies parts of Fey in a non-obvious way, make sure
+    to add comments in Fey as well. This helps other people understand the
+    change without having to dive into the Git history.
+
+
+    [OPTIONAL] I.iv.g. Write unit tests
+
+    When fixing a bug or contributing a new feature, we recommend including unit
+    tests in the same commit as the rest of the pull request. Unit tests are pieces
+    of code that compare the output to a predetermined *expected result* to detect
+    regressions. Tests are compiled and run on GitHub Actions for every commit and
+    pull request.
+
+    Pull requests that include tests are more likely to be merged, since we can have
+    greater confidence in them not being the target of regressions in the future.
+
+    For bugs, the unit tests should cover the functionality that was previously
+    broken. If done well, this ensures regressions won't appear in the future
+    again. For new features, the unit tests should cover the newly added
+    functionality, testing both the "success" and "expected failure" cases if
+    applicable.
+
+    Feel free to contribute standalone pull requests to add new tests or improve
+    existing tests as well.
+
+
+    [OPTIONAL] I.v. Contributing to Fey translations
+
+
+    I.vi. Communicating with developers
+
+    The Fey community has [many communication channels](tbd),
+    some used more for user-level discussions and support,
+    others more for development discussions.
+
+    To communicate with developers (e.g. to discuss a feature you want to implement
+    or a bug you want to fix), the following channels can be used:
+
+    - [](tbd) (for general discussions)
+    - [](tbd) (for development discussions)
+    - etc...
+
+
+    Thanks for your interest in contributing!
+        - Fey development team
+
+
+
+
+
