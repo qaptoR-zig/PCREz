@@ -443,11 +443,11 @@ pub const Regex = struct {
     }
 };
 
-fn regex_alloc(size: usize, _: ?*anyopaque) callconv(.C) ?*anyopaque {
+fn regex_alloc(size: usize, _: ?*anyopaque) callconv(.c) ?*anyopaque {
     return std.c.malloc(size);
 }
 
-fn regex_free(ptr: ?*anyopaque, _: ?*anyopaque) callconv(.C) void {
+fn regex_free(ptr: ?*anyopaque, _: ?*anyopaque) callconv(.c) void {
     if (ptr == null) return;
     std.c.free(ptr);
 }
@@ -461,7 +461,7 @@ const re = @cImport({
 });
 
 const Allocator = std.mem.Allocator;
-const AList = std.ArrayList;
+const AList = std.array_list.Managed;
 const SMap = std.StringHashMap;
 const SAMap = std.StringArrayHashMap;
 
