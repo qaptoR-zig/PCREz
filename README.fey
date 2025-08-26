@@ -45,7 +45,7 @@ Fey is a new markup language format. Specification of the language can be found 
 [Url] https://github.com/Loreite/Fey
 
 It is extremely early in development, and it is not recommended that anyone use it
-themselves unles they are prepared to deal with a continually changing specification.
+themselves unless they are prepared to deal with a continually changing specification.
 
 However, it is used in this project (as well as for its own documentation), so consider this
 a demonstration of its capabilities. (More or less what it looks like to use).

@@ -59,9 +59,9 @@ pub const RegexMatch = struct {
         end: ?usize = 0,
     };
 
-    pub fn init(alloc_: Allocator) RegexMatch {
+    fn init(alloc_: Allocator, subject_: []const u8) RegexMatch {
         return RegexMatch{
-            .subject = undefined,
+            .subject = subject_,
             .data = AList(Range).init(alloc_),
             .names = SMap(usize).init(alloc_),
             .allocator = alloc_,
@@ -74,57 +74,52 @@ pub const RegexMatch = struct {
     }
 
     pub fn getSubject(self: *const RegexMatch) []const u8 {
-        return self.subject orelse &"";
+        return self.subject;
     }
 
     pub fn getGroupCount(self: *const RegexMatch) usize {
-        if (self.data.len == 0) return 0;
-        return self.data.len - 1;
+        if (self.data.items.len == 0) return 0;
+        return self.data.items.len - 1;
     }
 
-    pub fn getNames(self: *const RegexMatch) SMap(usize) {
+    pub fn getNames(self: *const RegexMatch) !SMap(usize) {
         return self.names.clone();
     }
 
-    pub fn getStrings(self: *const RegexMatch) AList([]const u8) {
-        const result = AList([]const u8).init(self.allocator);
-        for (self.data) |range| {
-            if (range.start == -1) {
+    pub fn getStrings(self: *const RegexMatch) !AList([]const u8) {
+        var result = AList([]const u8).init(self.allocator);
+        for (self.data.items) |range| {
+            if (range.start.? == -1) {
                 result.append(""[0..]);
                 continue;
             }
-            result.append(self.subject[range.start..range.end]);
+            try result.append(self.subject[range.start.?..range.end.?]);
         }
+        return result;
     }
 
     // Groups
-    pub fn getNamedString(self: *const RegexMatch, name_: []const u8) []const u8 {
-        const index: ?usize = self.getNameIndex(name_);
+    pub fn getString(self: *const RegexMatch, id_: anytype) []const u8 {
+        const index: ?usize = switch (@TypeOf(id_)) {
+            usize, comptime_int => self.verifyIndex(id_),
+            else => self.getNameIndex(id_),
+        };
         return self.getSubstr(index);
     }
 
-    pub fn getStringAt(self: *const RegexMatch, index_: usize) []const u8 {
-        const index: ?usize = self.verifyIndex(index_);
-        return self.getSubstr(index);
-    }
-
-    pub fn getNamedStart(self: *const RegexMatch, name_: []const u8) ?usize {
-        const index: ?usize = self.getNameIndex(name_);
+    pub fn getStart(self: *const RegexMatch, id_: anytype) ?usize {
+        const index: ?usize = switch (@TypeOf(id_)) {
+            usize, comptime_int => self.verifyIndex(id_),
+            else => self.getNameIndex(id_),
+        };
         return if (index == null) null else self.data.items[index.?].start;
     }
 
-    pub fn getStartAt(self: *const RegexMatch, index_: usize) ?usize {
-        const index: ?usize = self.verifyIndex(index_);
-        return if (index == null) null else self.data.items[index.?].start;
-    }
-
-    pub fn getNamedEnd(self: *const RegexMatch, name_: []const u8) ?usize {
-        const index: ?usize = self.getNameIndex(name_);
-        return if (index == null) 0 else self.data.items[index.?].end;
-    }
-
-    pub fn getEndAt(self: *const RegexMatch, index_: usize) ?usize {
-        const index: ?usize = self.verifyIndex(index_);
+    pub fn getEnd(self: *const RegexMatch, id_: anytype) ?usize {
+        const index: ?usize = switch (@TypeOf(id_)) {
+            usize, comptime_int => self.verifyIndex(id_),
+            else => self.getNameIndex(id_),
+        };
         return if (index == null) null else self.data.items[index.?].end;
     }
 
@@ -247,7 +242,7 @@ pub const Regex = struct {
         const size: c_uint = re.pcre2_get_ovector_count_8(matchData);
         const ovector: [*c]usize = re.pcre2_get_ovector_pointer_8(matchData);
 
-        var match: RegexMatch = RegexMatch.init(self.allocator);
+        var match: RegexMatch = RegexMatch.init(self.allocator, subject_);
 
         for (0..size) |i| {
             const index: usize = i * 2;
@@ -267,20 +262,24 @@ pub const Regex = struct {
         match.subject = subject_;
 
         var count: c_uint = undefined;
-        var table: [*c]c_char = undefined;
+        var table: re.PCRE2_SPTR8 = undefined;
         var entrySize: c_uint = undefined;
+        const idByteSize: u8 = 2;
 
         self.patternInfo(re.PCRE2_INFO_NAMECOUNT, @ptrCast(&count));
         self.patternInfo(re.PCRE2_INFO_NAMETABLE, @ptrCast(&table));
         self.patternInfo(re.PCRE2_INFO_NAMEENTRYSIZE, @ptrCast(&entrySize));
 
         for (0..count) |i| {
-            const id: c_short = table[i * entrySize];
+            const entry_offset = i * entrySize;
+            const idPtr = @as(*const [idByteSize]u8, @ptrCast(&table[entry_offset]));
+            const id = std.mem.readInt(u16, idPtr, .big);
             if (match.data.items[@intCast(id)].start == null) {
                 continue;
             }
-            const len = std.mem.len(@as([*c]u8, @ptrCast(&table[i * entrySize + 2])));
-            const name: []const u8 = @ptrCast(@as([*]u8, @ptrCast(&table[i * entrySize + 2]))[0..len]);
+            const namePtr = @as([*c]const u8, @ptrCast(&table[entry_offset + idByteSize]));
+            const len = std.mem.len(namePtr);
+            const name: []const u8 = namePtr[0..len];
             if (match.names.contains(name)) {
                 continue;
             }
@@ -296,14 +295,13 @@ pub const Regex = struct {
         var offset = offset_ orelse 0;
         const end = end_ orelse -1;
 
-        // var lastEnd: usize = 0;
         var matches = AList(RegexMatch).init(self.allocator);
 
         while (true) {
             var match: ?RegexMatch = self.search(subject_, offset, end);
             if (match == null) break;
-            offset = match.?.getEndAt(0).?;
-            if (match.?.getStartAt(0).? == offset) {
+            offset = match.?.getEnd(0).?;
+            if (match.?.getStart(0).? == offset) {
                 offset += 1;
             }
 
@@ -347,7 +345,6 @@ pub const Regex = struct {
     }
 
     fn _sub(self: *Regex, subject_: []const u8, replacement_: []const u8, offset_: usize, end_: ?usize, flags_: c_uint, outString_: *AList(u8)) c_int {
-        // var outLength: re.PCRE2_SIZE = subject_.len + 1;
         var outLength: re.PCRE2_SIZE = subject_.len;
         outString_.resize(outLength) catch |err| {
             std.debug.print("Error ensuring total capacity: {any}", .{err});
@@ -518,13 +515,13 @@ test "Regex.search()" {
     try tests.expect(matchor != null);
 
     if (matchor) |match| {
-        try tests.expect(std.mem.eql(u8, "abd", match.getStringAt(0)));
-        try tests.expectEqual(2, match.getStartAt(0));
-        try tests.expectEqual(5, match.getEndAt(0));
+        try tests.expect(std.mem.eql(u8, "abd", match.getString(0)));
+        try tests.expectEqual(2, match.getStart(0));
+        try tests.expectEqual(5, match.getEnd(0));
 
-        try tests.expect(std.mem.eql(u8, "b", match.getStringAt(1)));
-        try tests.expectEqual(3, match.getStartAt(1));
-        try tests.expectEqual(4, match.getEndAt(1));
+        try tests.expect(std.mem.eql(u8, "b", match.getString(1)));
+        try tests.expectEqual(3, match.getStart(1));
+        try tests.expectEqual(4, match.getEnd(1));
     }
 }
 
@@ -538,21 +535,21 @@ test "Regex.searchAll()" {
 
     try tests.expectEqual(2, matches.items.len);
 
-    try tests.expect(std.mem.eql(u8, "abd", matches.items[0].getStringAt(0)));
-    try tests.expectEqual(0, matches.items[0].getStartAt(0));
-    try tests.expectEqual(3, matches.items[0].getEndAt(0));
+    try tests.expect(std.mem.eql(u8, "abd", matches.items[0].getString(0)));
+    try tests.expectEqual(0, matches.items[0].getStart(0));
+    try tests.expectEqual(3, matches.items[0].getEnd(0));
 
-    try tests.expect(std.mem.eql(u8, "b", matches.items[0].getStringAt(1)));
-    try tests.expectEqual(1, matches.items[0].getStartAt(1));
-    try tests.expectEqual(2, matches.items[0].getEndAt(1));
+    try tests.expect(std.mem.eql(u8, "b", matches.items[0].getString(1)));
+    try tests.expectEqual(1, matches.items[0].getStart(1));
+    try tests.expectEqual(2, matches.items[0].getEnd(1));
 
-    try tests.expect(std.mem.eql(u8, "acd", matches.items[1].getStringAt(0)));
-    try tests.expectEqual(4, matches.items[1].getStartAt(0));
-    try tests.expectEqual(7, matches.items[1].getEndAt(0));
+    try tests.expect(std.mem.eql(u8, "acd", matches.items[1].getString(0)));
+    try tests.expectEqual(4, matches.items[1].getStart(0));
+    try tests.expectEqual(7, matches.items[1].getEnd(0));
 
-    try tests.expect(std.mem.eql(u8, "c", matches.items[1].getStringAt(1)));
-    try tests.expectEqual(5, matches.items[1].getStartAt(1));
-    try tests.expectEqual(6, matches.items[1].getEndAt(1));
+    try tests.expect(std.mem.eql(u8, "c", matches.items[1].getString(1)));
+    try tests.expectEqual(5, matches.items[1].getStart(1));
+    try tests.expectEqual(6, matches.items[1].getEnd(1));
 }
 
 test "Regex.sub()" {
@@ -603,4 +600,141 @@ test "Regex.getNames()" {
     try tests.expectEqual(2, names.count());
     try tests.expect(names.contains("first"));
     try tests.expect(names.contains("second"));
+}
+
+test "RegexMatch.getSubject()" {
+    var regex = try Regex.from("a(b|c)d", true, tests.allocator);
+    defer regex.deinit();
+
+    const subject = "ffabdgg";
+    var matchor: ?RegexMatch = regex.search(subject, 0, -1);
+    if (matchor == null) {
+        return;
+    }
+    defer matchor.?.deinit();
+
+    if (matchor) |match| {
+        try tests.expect(std.mem.eql(u8, subject, match.getSubject()));
+    }
+}
+
+test "RegexMatch.getGroupCount()" {
+    var regex = try Regex.from("a(b|c)d", true, tests.allocator);
+    defer regex.deinit();
+
+    const subject = "ffabdgg";
+    var matchor: ?RegexMatch = regex.search(subject, 0, -1);
+    if (matchor == null) {
+        return;
+    }
+    defer matchor.?.deinit();
+
+    if (matchor) |match| {
+        try tests.expectEqual(1, match.getGroupCount());
+    }
+}
+
+test "RegexMatch.getNames()" {
+    var regex = try Regex.from(".*(?'first'ab)(?'second'd).*", true, tests.allocator);
+    defer regex.deinit();
+
+    const subject = "ffabdgg";
+    var matchor: ?RegexMatch = regex.search(subject, 0, -1);
+    if (matchor == null) {
+        return;
+    }
+    defer matchor.?.deinit();
+
+    if (matchor) |match| {
+        var names: SMap(usize) = try match.getNames();
+        defer names.deinit();
+
+        try tests.expectEqual(2, names.count());
+        try tests.expect(names.contains("first"));
+        try tests.expect(names.contains("second"));
+    }
+}
+
+test "RegexMatch.getStrings()" {
+    var regex = try Regex.from(".*(ab)(d).*", true, tests.allocator);
+    defer regex.deinit();
+
+    const subject = "ffabdgg";
+    var matchor: ?RegexMatch = regex.search(subject, 0, -1);
+    if (matchor == null) {
+        return;
+    }
+    defer matchor.?.deinit();
+
+    if (matchor) |match| {
+        var strings: AList([]const u8) = try match.getStrings();
+        defer strings.deinit();
+
+        try tests.expectEqual(3, strings.items.len);
+        try tests.expect(std.mem.eql(u8, "ffabdgg", strings.items[0]));
+        try tests.expect(std.mem.eql(u8, "ab", strings.items[1]));
+        try tests.expect(std.mem.eql(u8, "d", strings.items[2]));
+    }
+}
+
+test "RegexMatch.getString()" {
+    var regex = try Regex.from(".*(?'first'ab)(?'second'd).*", true, tests.allocator);
+    defer regex.deinit();
+
+    const subject = "ffabdgg";
+    var matchor: ?RegexMatch = regex.search(subject, 0, -1);
+    if (matchor == null) {
+        return;
+    }
+    defer matchor.?.deinit();
+
+    if (matchor) |match| {
+        try tests.expect(std.mem.eql(u8, "ab", match.getString("first")));
+        try tests.expect(std.mem.eql(u8, "d", match.getString("second")));
+        try tests.expect(std.mem.eql(u8, "ffabdgg", match.getString(0)));
+        try tests.expect(std.mem.eql(u8, "ab", match.getString(1)));
+        try tests.expect(std.mem.eql(u8, "d", match.getString(2)));
+    }
+}
+
+test "RegexMatch.getStart()" {
+    var regex = try Regex.from(".*(?'first'ab)(?'second'd).*", true, tests.allocator);
+    defer regex.deinit();
+
+    const subject = "ffabdgg";
+    var matchor: ?RegexMatch = regex.search(subject, 0, -1);
+    if (matchor == null) {
+        std.debug.print("Something went wrong: RegexMatch.getStrings", .{});
+        return;
+    }
+    defer matchor.?.deinit();
+
+    if (matchor) |match| {
+        try tests.expectEqual(0, match.getStart(0));
+        try tests.expectEqual(2, match.getStart("first"));
+        try tests.expectEqual(2, match.getStart(1));
+        try tests.expectEqual(4, match.getStart("second"));
+        try tests.expectEqual(4, match.getStart(2));
+    }
+}
+
+test "RegexMatch.getEnd()" {
+    var regex = try Regex.from(".*(?'first'ab)(?'second'd).*", true, tests.allocator);
+    defer regex.deinit();
+
+    const subject = "ffabdgg";
+    var matchor: ?RegexMatch = regex.search(subject, 0, -1);
+    if (matchor == null) {
+        std.debug.print("Something went wrong: RegexMatch.getStrings", .{});
+        return;
+    }
+    defer matchor.?.deinit();
+
+    if (matchor) |match| {
+        try tests.expectEqual(7, match.getEnd(0));
+        try tests.expectEqual(4, match.getEnd("first"));
+        try tests.expectEqual(4, match.getEnd(1));
+        try tests.expectEqual(5, match.getEnd("second"));
+        try tests.expectEqual(5, match.getEnd(2));
+    }
 }
