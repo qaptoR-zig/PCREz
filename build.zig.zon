@@ -4,7 +4,7 @@
     .version = "0.0.1",
 
     .fingerprint = 0xe94cf4c1ed12b57f, // Changing this has security and trust implications.
-    .minimum_zig_version = "0.14.0",
+    .minimum_zig_version = "0.15.1",
 
     .dependencies = .{
         .pcre2 = .{
